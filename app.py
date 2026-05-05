@@ -11,11 +11,11 @@ import io       # FINAL MOBILE FIX
 
 st.set_page_config(page_title="WhatsApp Chat Analyzer", page_icon="💬", layout="wide")
 
-# UI POLISH: Red/Black theme with refined soft glow
+# UI UPDATE: Red/Black theme with card styles
 st.markdown("""
 <style>
     /* Global */
-    .block-container { padding-top: 1.5rem; }
+    .block-container { padding-top: 1rem; }
     [data-testid="stAppViewContainer"] {
         background: #0f1117;
     }
@@ -23,7 +23,17 @@ st.markdown("""
         background: #1a1a2e;
     }
 
-    /* Cards — soft red glow */
+    /* Title box */
+    .title-box {
+        text-align: center;
+        padding: 10px 0 5px 0;
+    }
+    .title-box h1 {
+        color: #ff4b4b;
+        font-size: 2rem;
+    }
+
+    /* Cards */
     .card {
         background: #1a1d24;
         padding: 18px;
@@ -60,7 +70,7 @@ st.markdown("""
         margin: 0;
     }
 
-    /* Insight boxes — clean with subtle glow */
+    /* Insight boxes */
     .insight-box {
         padding: 12px 16px;
         border-left: 3px solid #ff4b4b;
@@ -106,24 +116,56 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 10px;
     }
+
+    /* CARD STYLE: Button polish */
+    div.stButton > button {
+        background-color: #ff4b4b;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+    div.stButton > button:hover {
+        background-color: #ff1f1f;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ============================================================
-# Sidebar — branding
+# UI UPDATE: Sidebar — branding + uploader
 # ============================================================
 
-st.sidebar.markdown("## 💬 WhatsApp Chat Analyzer")
-st.sidebar.markdown("*AI-powered chat analytics*")
+st.sidebar.title("📊 Chat Analyzer")
+st.sidebar.markdown("Upload your chat file to begin")
 st.sidebar.markdown("---")
 
-# FINAL MOBILE FIX: Main-page uploader (works reliably on all devices)
-uploaded_file = st.file_uploader("Upload chat file", type=["txt", "zip"])
+# UI UPDATE: Sidebar file uploader
+uploaded_file = st.sidebar.file_uploader(
+    "📂 Upload WhatsApp Chat",
+    type=["txt", "zip"]
+)
+
+# UI UPDATE: Main header
+st.markdown('<div class="title-box"><h1>💬 WhatsApp Chat Analyzer</h1></div>', unsafe_allow_html=True)
+
+# GIF LOADER: Rocket GIF URL
+_ROCKET_GIF = "https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif"
 
 if uploaded_file is not None:
 
-    # FINAL MOBILE FIX: Read bytes — handle both ZIP and TXT
+    # GIF LOADER: Show processing animation
+    loader = st.empty()
+    loader.markdown(f"""
+    <div style="text-align:center; padding: 40px 0;">
+        <img src="{_ROCKET_GIF}" width="180">
+        <p style="color: #ff6b6b; font-size: 1.1rem; margin-top: 15px;">Processing chat... 🚀</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Read bytes — handle both ZIP and TXT
     bytes_data = None
     try:
         file_name = uploaded_file.name.lower()
@@ -135,15 +177,17 @@ if uploaded_file is not None:
                     with z.open(txt_files[0]) as f:
                         bytes_data = f.read()
                 else:
+                    loader.empty()
                     st.error("No .txt file found inside the ZIP.")
                     st.stop()
         else:
             bytes_data = uploaded_file.read()
     except Exception:
+        loader.empty()
         st.error("Could not read file.")
         st.stop()
 
-    # FINAL MOBILE FIX: Robust decoding (utf-8 → utf-16 → latin-1 → cp1252)
+    # Robust decoding
     data = None
     for enc in ["utf-8", "utf-16", "latin-1", "cp1252"]:
         try:
@@ -153,17 +197,22 @@ if uploaded_file is not None:
             continue
 
     if data is None:
+        loader.empty()
         st.error("Unable to decode file.")
         st.stop()
 
-    # FINAL MOBILE FIX: Remove BOM if present
+    # Remove BOM if present
     data = data.replace('\ufeff', '')
 
     if len(data.strip()) == 0:
+        loader.empty()
         st.error("File is empty.")
         st.stop()
 
     df = preprocessor.preprocess(data)
+
+    # GIF LOADER: Clear the loader after processing
+    loader.empty()
 
     if df.empty:
         st.error("Could not parse chat data. Please check the file format.")
@@ -533,10 +582,9 @@ if uploaded_file is not None:
         st.markdown("*Click the button above to generate an AI-powered summary with topic analysis and sentiment overview.*")
 
 else:
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-    <div style="text-align: center; padding: 60px 20px;">
-        <h1 style="color: #ff4b4b;">💬 WhatsApp Chat Analyzer</h1>
-        <p style="color: #888; font-size: 1.2rem;">Upload a WhatsApp chat export (.txt or .zip) to get started</p>
+    <div style="text-align: center; padding: 40px 20px; color: #888;">
+        <p style="font-size: 1.1rem;">📂 Upload a WhatsApp chat file (.txt or .zip) from the sidebar to get started</p>
     </div>
     """, unsafe_allow_html=True)
