@@ -8,3 +8,4 @@ urlextract
 scikit-learn
 textblob
 nltk
+vaderSentiment
