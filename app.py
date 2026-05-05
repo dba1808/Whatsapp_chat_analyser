@@ -115,19 +115,64 @@ st.markdown("""
 st.sidebar.markdown("## 💬 WhatsApp Chat Analyzer")
 st.sidebar.markdown("*AI-powered chat analytics*")
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
-**How to use:**
-1. 📤 Upload a WhatsApp chat export (.txt)
-2. 👤 Select a user or 'Overall'
-3. 📊 Analysis runs automatically!
+
+# UX IMPROVEMENT: Export instructions in sidebar
+st.sidebar.info("""
+📌 **How to export chat:**
+1. Open WhatsApp chat
+2. Tap ⋮ → More → Export Chat
+3. Select 'Without Media'
+4. Extract the ZIP file
+5. Upload the .txt file here
+
+*Works on mobile and desktop*
 """)
 st.sidebar.markdown("---")
 
-uploaded_file = st.sidebar.file_uploader('Upload WhatsApp Chat (.txt)')
+# UX IMPROVEMENT: Accept both .txt and .zip for better guidance
+uploaded_file = st.sidebar.file_uploader(
+    'Upload WhatsApp Chat (.txt only)',
+    type=['txt', 'zip']
+)
 
 if uploaded_file is not None:
+
+    # ZIP FIX: Catch ZIP uploads and guide the user
+    if uploaded_file.name.endswith('.zip'):
+        st.warning("""
+        ⚠️ **Please upload the extracted chat file (.txt)**
+
+        **Steps to fix:**
+        1. Open the ZIP file on your device
+        2. Extract/unzip it
+        3. Locate the .txt file (usually named `_chat.txt`)
+        4. Upload the .txt file here
+
+        *Note: Do NOT upload the ZIP file directly.*
+        """)
+        st.stop()
+
     bytes_data = uploaded_file.getvalue()
-    data = bytes_data.decode("utf-8")
+
+    # MOBILE FIX: Handle multiple encodings (mobile exports may use utf-16)
+    data = None
+    for encoding in ['utf-8', 'utf-16', 'latin-1']:
+        try:
+            data = bytes_data.decode(encoding)
+            break
+        except (UnicodeDecodeError, Exception):
+            continue
+
+    if data is None:
+        st.error("❌ Unable to read file. Please upload a valid exported WhatsApp chat (.txt file).")
+        st.stop()
+
+    # MOBILE FIX: Remove BOM (Byte Order Mark) if present
+    data = data.replace('\ufeff', '')
+
+    # UX IMPROVEMENT: Show upload feedback
+    st.sidebar.success(f"✅ Uploaded: {uploaded_file.name}")
+
     df = preprocessor.preprocess(data)
 
     # FIXED: Safety check for empty dataframe
@@ -501,7 +546,7 @@ if uploaded_file is not None:
         st.markdown("*Click the button above to generate an AI-powered summary with topic analysis and sentiment overview.*")
 
 else:
-    # FIXED: Show welcome screen when no file uploaded
+    # UX IMPROVEMENT: Welcome screen with export guide
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("""
     <div style="text-align: center; padding: 60px 20px;">
@@ -512,3 +557,13 @@ else:
         </p>
     </div>
     """, unsafe_allow_html=True)
+    st.info("""
+    📌 **How to export your WhatsApp chat:**
+    1. Open the WhatsApp chat you want to analyze
+    2. Tap ⋮ (three dots) → More → Export Chat
+    3. Select **Without Media**
+    4. Extract the downloaded ZIP file
+    5. Upload the `.txt` file here
+
+    *Works on both mobile and desktop!*
+    """)
