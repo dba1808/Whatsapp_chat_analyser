@@ -151,13 +151,19 @@ uploaded_file = st.sidebar.file_uploader(
 # UI UPDATE: Main header
 st.markdown('<div class="title-box"><h1>💬 WhatsApp Chat Analyzer</h1></div>', unsafe_allow_html=True)
 
+import pathlib
+
 # GIF LOADER: Local GIF file
-_GIF_PATH = "247a8220ebe0d7e99dbbd31a2c227dde7767fbe1.gif"
+_GIF_PATH = str(pathlib.Path(__file__).parent / "247a8220ebe0d7e99dbbd31a2c227dde7767fbe1.gif")
 
 if uploaded_file is not None:
 
     # GIF LOADER: Show processing animation using st.image
-    gif_runner = st.image(_GIF_PATH)
+    try:
+        gif_runner = st.image(_GIF_PATH)
+    except Exception as e:
+        gif_runner = st.empty()
+        gif_runner.info("Processing chat...")
 
     # Read bytes — handle both ZIP and TXT
     bytes_data = None
