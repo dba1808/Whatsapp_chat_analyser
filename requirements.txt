@@ -1,0 +1,10 @@
+streamlit
+pandas
+matplotlib
+seaborn
+wordcloud
+emoji
+urlextract
+scikit-learn
+textblob
+nltk
