@@ -151,19 +151,13 @@ uploaded_file = st.sidebar.file_uploader(
 # UI UPDATE: Main header
 st.markdown('<div class="title-box"><h1>💬 WhatsApp Chat Analyzer</h1></div>', unsafe_allow_html=True)
 
-# GIF LOADER: Rocket GIF URL
-_ROCKET_GIF = "https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif"
+# GIF LOADER: Local GIF file
+_GIF_PATH = "247a8220ebe0d7e99dbbd31a2c227dde7767fbe1.gif"
 
 if uploaded_file is not None:
 
-    # GIF LOADER: Show processing animation
-    loader = st.empty()
-    loader.markdown(f"""
-    <div style="text-align:center; padding: 40px 0;">
-        <img src="{_ROCKET_GIF}" width="180">
-        <p style="color: #ff6b6b; font-size: 1.1rem; margin-top: 15px;">Processing chat... 🚀</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # GIF LOADER: Show processing animation using st.image
+    gif_runner = st.image(_GIF_PATH)
 
     # Read bytes — handle both ZIP and TXT
     bytes_data = None
@@ -177,13 +171,13 @@ if uploaded_file is not None:
                     with z.open(txt_files[0]) as f:
                         bytes_data = f.read()
                 else:
-                    loader.empty()
+                    gif_runner.empty()
                     st.error("No .txt file found inside the ZIP.")
                     st.stop()
         else:
             bytes_data = uploaded_file.read()
     except Exception:
-        loader.empty()
+        gif_runner.empty()
         st.error("Could not read file.")
         st.stop()
 
@@ -197,7 +191,7 @@ if uploaded_file is not None:
             continue
 
     if data is None:
-        loader.empty()
+        gif_runner.empty()
         st.error("Unable to decode file.")
         st.stop()
 
@@ -205,14 +199,14 @@ if uploaded_file is not None:
     data = data.replace('\ufeff', '')
 
     if len(data.strip()) == 0:
-        loader.empty()
+        gif_runner.empty()
         st.error("File is empty.")
         st.stop()
 
     df = preprocessor.preprocess(data)
 
     # GIF LOADER: Clear the loader after processing
-    loader.empty()
+    gif_runner.empty()
 
     if df.empty:
         st.error("Could not parse chat data. Please check the file format.")
