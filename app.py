@@ -2,6 +2,8 @@ import streamlit as st
 import preprocessor, helper
 import matplotlib.pyplot as plt
 import seaborn as sns
+import zipfile  # FINAL MOBILE FIX
+import io       # FINAL MOBILE FIX
 
 # ============================================================
 # UI UPDATE: Page config
@@ -109,75 +111,62 @@ st.markdown("""
 
 
 # ============================================================
-# UI UPDATE: Sidebar — branding + instructions
+# Sidebar — branding
 # ============================================================
 
 st.sidebar.markdown("## 💬 WhatsApp Chat Analyzer")
 st.sidebar.markdown("*AI-powered chat analytics*")
 st.sidebar.markdown("---")
 
-# UX IMPROVEMENT: Export instructions in sidebar
-st.sidebar.info("""
-📌 **How to export chat:**
-1. Open WhatsApp chat
-2. Tap ⋮ → More → Export Chat
-3. Select 'Without Media'
-4. Extract the ZIP file
-5. Upload the .txt file here
-
-*Works on mobile and desktop*
-""")
-st.sidebar.markdown("---")
-
-# UX IMPROVEMENT: Accept both .txt and .zip for better guidance
-uploaded_file = st.sidebar.file_uploader(
-    'Upload WhatsApp Chat (.txt only)',
-    type=['txt', 'zip']
-)
+# FINAL MOBILE FIX: Main-page uploader (works reliably on all devices)
+uploaded_file = st.file_uploader("Upload chat file", type=["txt", "zip"])
 
 if uploaded_file is not None:
 
-    # ZIP FIX: Catch ZIP uploads and guide the user
-    if uploaded_file.name.endswith('.zip'):
-        st.warning("""
-        ⚠️ **Please upload the extracted chat file (.txt)**
+    # FINAL MOBILE FIX: Read bytes — handle both ZIP and TXT
+    bytes_data = None
+    try:
+        file_name = uploaded_file.name.lower()
 
-        **Steps to fix:**
-        1. Open the ZIP file on your device
-        2. Extract/unzip it
-        3. Locate the .txt file (usually named `_chat.txt`)
-        4. Upload the .txt file here
-
-        *Note: Do NOT upload the ZIP file directly.*
-        """)
+        if file_name.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(uploaded_file.read())) as z:
+                txt_files = [f for f in z.namelist() if f.endswith(".txt")]
+                if len(txt_files) > 0:
+                    with z.open(txt_files[0]) as f:
+                        bytes_data = f.read()
+                else:
+                    st.error("No .txt file found inside the ZIP.")
+                    st.stop()
+        else:
+            bytes_data = uploaded_file.read()
+    except Exception:
+        st.error("Could not read file.")
         st.stop()
 
-    bytes_data = uploaded_file.getvalue()
-
-    # MOBILE FIX: Handle multiple encodings (mobile exports may use utf-16)
+    # FINAL MOBILE FIX: Robust decoding (utf-8 → utf-16 → latin-1 → cp1252)
     data = None
-    for encoding in ['utf-8', 'utf-16', 'latin-1']:
+    for enc in ["utf-8", "utf-16", "latin-1", "cp1252"]:
         try:
-            data = bytes_data.decode(encoding)
+            data = bytes_data.decode(enc)
             break
-        except (UnicodeDecodeError, Exception):
+        except Exception:
             continue
 
     if data is None:
-        st.error("❌ Unable to read file. Please upload a valid exported WhatsApp chat (.txt file).")
+        st.error("Unable to decode file.")
         st.stop()
 
-    # MOBILE FIX: Remove BOM (Byte Order Mark) if present
+    # FINAL MOBILE FIX: Remove BOM if present
     data = data.replace('\ufeff', '')
 
-    # UX IMPROVEMENT: Show upload feedback
-    st.sidebar.success(f"✅ Uploaded: {uploaded_file.name}")
+    if len(data.strip()) == 0:
+        st.error("File is empty.")
+        st.stop()
 
     df = preprocessor.preprocess(data)
 
-    # FIXED: Safety check for empty dataframe
     if df.empty:
-        st.error("⚠️ Could not parse chat data. Please check the file format.")
+        st.error("Could not parse chat data. Please check the file format.")
         st.stop()
 
     # Fetch unique users
@@ -188,8 +177,6 @@ if uploaded_file is not None:
     user_list.insert(0, 'Overall')
 
     selected_user = st.sidebar.selectbox('Show analysis for:', user_list)
-
-    # FIXED: Auto-render — removed button dependency, analysis runs on upload + user select
 
     # ================================================================
     # SECTION 1: Top Statistics
@@ -546,24 +533,10 @@ if uploaded_file is not None:
         st.markdown("*Click the button above to generate an AI-powered summary with topic analysis and sentiment overview.*")
 
 else:
-    # UX IMPROVEMENT: Welcome screen with export guide
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("""
     <div style="text-align: center; padding: 60px 20px;">
         <h1 style="color: #ff4b4b;">💬 WhatsApp Chat Analyzer</h1>
-        <p style="color: #888; font-size: 1.2rem;">Upload a WhatsApp chat export to get started</p>
-        <p style="color: #666; font-size: 0.9rem; margin-top: 20px;">
-            📤 Use the sidebar to upload your .txt file
-        </p>
+        <p style="color: #888; font-size: 1.2rem;">Upload a WhatsApp chat export (.txt or .zip) to get started</p>
     </div>
     """, unsafe_allow_html=True)
-    st.info("""
-    📌 **How to export your WhatsApp chat:**
-    1. Open the WhatsApp chat you want to analyze
-    2. Tap ⋮ (three dots) → More → Export Chat
-    3. Select **Without Media**
-    4. Extract the downloaded ZIP file
-    5. Upload the `.txt` file here
-
-    *Works on both mobile and desktop!*
-    """)
